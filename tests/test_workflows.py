@@ -11,6 +11,7 @@ class WorkflowPolicyTests(unittest.TestCase):
         self.assertIn("- main", workflow)
         self.assertIn("workflow_dispatch:", workflow)
         self.assertIn("producer:", workflow)
+        self.assertIn("validate_coverage.py", workflow)
 
     def test_update_is_daily_review_only(self):
         workflow = Path(".github/workflows/update-catalog.yml").read_text()
