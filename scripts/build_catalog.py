@@ -12,6 +12,16 @@ from scripts.catalog import LABELS, canonical_bytes, load_json, validate_catalog
 EXCLUDED_MARKERS = ("beta", "preview", "developer", "canary")
 
 
+def resolve_version(previous: dict, current: dict, templates: list[dict]) -> int:
+    if previous["models"] == current["models"]:
+        return previous["catalogVersion"]
+    required = {item["device"] for item in templates}
+    previous_devices = {item["device"] for item in previous["models"]}
+    if previous_devices != required:
+        return previous["catalogVersion"]
+    return previous["catalogVersion"] + 1
+
+
 def build_catalog(templates: list[dict], verified: list[dict], version: int, generated_at: str) -> dict:
     by_device = {item["device"]: item for item in templates}
     grouped: dict[str, list[dict]] = {}
@@ -96,7 +106,7 @@ def main() -> None:
     if args.previous and Path(args.previous).exists():
         previous = load_json(args.previous)
         same_models = previous["models"] == catalog["models"]
-        version = previous["catalogVersion"] if same_models else previous["catalogVersion"] + 1
+        version = resolve_version(previous, catalog, templates)
         generated = previous["generatedAt"] if same_models else generated
         catalog = build_catalog(templates, verified, version, generated)
     output = Path(args.output)

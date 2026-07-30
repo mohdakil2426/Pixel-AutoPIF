@@ -1,6 +1,6 @@
 import unittest
 
-from scripts.build_catalog import build_catalog
+from scripts.build_catalog import build_catalog, resolve_version
 from scripts.catalog import canonical_bytes, load_json
 
 
@@ -51,6 +51,20 @@ class BuildCatalogTests(unittest.TestCase):
             "2026-07-30T00:00:00Z",
         )
         self.assertNotEqual(canonical_bytes(first), canonical_bytes(changed))
+
+    def test_bootstrap_stays_v1_until_previous_catalog_has_complete_coverage(self):
+        required = [{"device": "alpha"}, {"device": "beta"}]
+        partial = {"catalogVersion": 1, "models": [{"device": "alpha"}]}
+        complete = {
+            "catalogVersion": 1,
+            "models": [{"device": "alpha"}, {"device": "beta"}],
+        }
+        changed = {
+            "catalogVersion": 1,
+            "models": [{"device": "alpha"}, {"device": "beta", "changed": True}],
+        }
+        self.assertEqual(1, resolve_version(partial, complete, required))
+        self.assertEqual(2, resolve_version(complete, changed, required))
 
 
 if __name__ == "__main__":
