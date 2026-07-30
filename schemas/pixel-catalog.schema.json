@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "catalogVersion", "generatedAt", "sourcePolicy", "models"],
+  "properties": {
+    "schemaVersion": {"const": 1},
+    "catalogVersion": {"type": "integer", "minimum": 1},
+    "generatedAt": {"type": "string", "format": "date-time"},
+    "sourcePolicy": {"const": "official-google-full-ota-metadata"},
+    "models": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "items": {"$ref": "#/$defs/model"}
+    }
+  },
+  "$defs": {
+    "model": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profileId", "manufacturer", "brand", "model", "device", "product", "board", "builds"],
+      "properties": {
+        "profileId": {"type": "string", "pattern": "^pixel_[a-z0-9_]+$"},
+        "manufacturer": {"const": "Google"},
+        "brand": {"const": "google"},
+        "model": {"type": "string", "pattern": "^Pixel(?: .+)?$"},
+        "device": {"type": "string", "pattern": "^[a-z0-9_]+$"},
+        "product": {"type": "string", "pattern": "^[a-z0-9_]+$"},
+        "board": {"type": "string", "pattern": "^[a-z0-9_]+$"},
+        "builds": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 3,
+          "items": {"$ref": "#/$defs/build"}
+        }
+      }
+    },
+    "build": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rank", "label", "fingerprint", "buildId", "incremental", "sdkInt", "securityPatch", "otaUrl", "otaSha256", "verifiedAt"],
+      "properties": {
+        "rank": {"type": "integer", "minimum": 0, "maximum": 2},
+        "label": {"enum": ["Recommended", "Previous", "Earlier"]},
+        "fingerprint": {"type": "string", "maxLength": 200},
+        "buildId": {"type": "string", "maxLength": 64},
+        "incremental": {"type": "string", "pattern": "^[0-9]+$"},
+        "sdkInt": {"type": "integer", "minimum": 21, "maximum": 100},
+        "securityPatch": {"type": "string", "format": "date"},
+        "otaUrl": {"type": "string", "format": "uri", "maxLength": 500},
+        "otaSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "verifiedAt": {"type": "string", "format": "date-time"}
+      }
+    }
+  }
+}

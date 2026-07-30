@@ -1,0 +1,5 @@
+post-build=google/comet/comet:15/AP4A.250205.002/12821496:user/release-keys
+post-build-incremental=12821496
+post-sdk-level=35
+post-security-patch-level=2025-02-05
+pre-device=comet

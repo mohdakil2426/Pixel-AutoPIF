@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+.venv/
+dist/
+.pytest_cache/
+.coverage
+*.pem
+*.key
+*.p12
+*.pk8
+*private*
+*passphrase*

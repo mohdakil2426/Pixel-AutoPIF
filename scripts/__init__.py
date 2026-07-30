@@ -1,0 +1,1 @@
+"""Pixel AutoPIF catalog producer."""

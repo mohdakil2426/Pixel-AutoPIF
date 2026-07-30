@@ -1,0 +1,16 @@
+[
+  {
+    "modelKey":"comet",
+    "otaUrl":"https://dl.google.com/dl/android/aosp/comet-ota-ap4a.250205.002-5b998617.zip",
+    "otaSha256":"5b998617ac3dc94ed3951b4ff8bb0cbf5e12e9381e559abc2f185d1588db499d",
+    "buildLabel":"AP4A.250205.002",
+    "observedAt":"2026-07-30T00:00:00Z",
+    "status":"verified",
+    "fingerprint":"google/comet/comet:15/AP4A.250205.002/12821496:user/release-keys",
+    "buildId":"AP4A.250205.002",
+    "incremental":"12821496",
+    "sdkInt":35,
+    "securityPatch":"2025-02-05",
+    "verifiedAt":"2026-07-30T00:00:00Z"
+  }
+]
