@@ -1,6 +1,6 @@
 # Catalog operations
 
-1. The weekly update job discovers candidates and opens/updates one review PR.
+1. The daily update job discovers candidates and opens/updates one review PR.
 2. A maintainer reviews every candidate disposition, official OTA URL/digest,
    extracted tuple, newest-three rotation, and canonical diff.
 3. After merge, an operator manually dispatches release from the protected
@@ -16,3 +16,8 @@ adds `contents: write` and `pull-requests: write`; release alone gets
 Key rotation is app-update-bound. On compromise, disable releases, remove the
 secret, audit releases, create a new offline P-256 key, update the app's pinned
 SPKI/key ID, release the app, then resume catalog publication.
+
+The production public key is
+`public-keys/pixel-autopif-p256-v1.spki.der.base64`. Verify downloaded catalog
+and manifest assets with `scripts/verify_release.py`; never download or expose
+the protected environment secret for verification.
