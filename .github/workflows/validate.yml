@@ -25,3 +25,7 @@ jobs:
           python scripts/validate_catalog.py
           --catalog catalog/pixel-catalog-current.json
           --schema schemas/pixel-catalog.schema.json
+      - run: >-
+          python scripts/validate_coverage.py
+          --templates templates/pixel-devices.json
+          --verified data/verified-candidates.json
