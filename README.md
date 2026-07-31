@@ -16,5 +16,6 @@ python scripts/build_catalog.py --templates templates/pixel-devices.json --verif
 python scripts/validate_catalog.py --catalog dist/pixel-catalog-v1.json --schema schemas/pixel-catalog.schema.json
 ```
 
-Repository creation, GitHub secrets/environments, and releases remain separate
-operator-approved actions.
+The public repository publishes reviewed, signed, immutable releases. See
+[`docs/OPERATIONS.md`](docs/OPERATIONS.md) for update review, protected release,
+independent verification, recovery, and key-rotation procedures.
