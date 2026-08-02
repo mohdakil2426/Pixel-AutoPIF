@@ -3,11 +3,11 @@ set -Eeuo pipefail
 
 usage() {
   cat <<'USAGE'
-usage: scripts/crawl-canary.sh [--output data/pif-canary.json]
+usage: scripts/crawl-pixel-data.sh [--output data/pif-data.json]
 USAGE
 }
 
-output=data/pif-canary.json
+output=data/pif-data.json
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --output)
@@ -49,7 +49,7 @@ ANDROID_VERSIONS_URL=https://developer.android.com/about/versions
 FLASH_HOME=https://flash.android.com
 FLASH_API=https://content-flashstation-pa.googleapis.com/v1/builds
 PIXEL_BULLETIN=https://source.android.com/docs/security/bulletin/pixel
-USER_AGENT='Pixel-AutoPIF-canary/1.0'
+USER_AGENT='Pixel-AutoPIF/1.0'
 
 download() {
   local url=$1
@@ -194,36 +194,36 @@ while IFS=$'\t' read -r raw_model product; do
   printf 'Crawling %s (%s)...\n' "$model" "$product"
   station_json="$tmpdir/station-$entry_count.json"
   reversed_json="$tmpdir/reversed-$entry_count.json"
-  canary_json="$tmpdir/canary-$entry_count.json"
+  release_json="$tmpdir/release-$entry_count.json"
   curl --fail --silent --show-error --location --retry 2 --retry-all-errors \
     --connect-timeout 15 --max-time 45 --compressed \
     --user-agent "$USER_AGENT" --header "Referer: $FLASH_HOME" \
     "$FLASH_API?product=$product&key=$flash_key" -o "$station_json"
   tac "$station_json" > "$reversed_json"
-  grep -m 1 -A 20 '"canary": true' "$reversed_json" > "$canary_json" || {
+  grep -m 1 -A 20 '"canary": true' "$reversed_json" > "$release_json" || {
       printf 'no canary build found for %s\n' "$product" >&2
       exit 1
     }
 
   release_id=$(
-    grep -m 1 '"releaseCandidateName"' "$canary_json" |
+    grep -m 1 '"releaseCandidateName"' "$release_json" |
       sed -nE 's/.*"releaseCandidateName"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/p'
   )
   incremental=$(
-    grep -m 1 '"buildId"' "$canary_json" |
+    grep -m 1 '"buildId"' "$release_json" |
       sed -nE 's/.*"buildId"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/p'
   )
-  canary_suffix=$(
-    grep -m 1 '"id"' "$canary_json" |
+  release_suffix=$(
+    grep -m 1 '"id"' "$release_json" |
       sed -nE 's/.*"id"[[:space:]]*:[[:space:]]*"canary-([^"]+)".*/\1/p'
   )
-  [[ -n $release_id && -n $incremental && -n $canary_suffix ]] || {
+  [[ -n $release_id && -n $incremental && -n $release_suffix ]] || {
     printf 'missing canary release data for %s\n' "$product" >&2
     exit 1
   }
 
   fingerprint="google/$product/$device:CANARY/$release_id/$incremental:user/release-keys"
-  bulletin_month=$(printf '%s' "$canary_suffix" | sed -nE 's/^([0-9]{4})([0-9]{2}).*$/\1-\2/p')
+  bulletin_month=$(printf '%s' "$release_suffix" | sed -nE 's/^([0-9]{4})([0-9]{2}).*$/\1-\2/p')
   security_patch=
   if [[ -n $bulletin_month ]]; then
     security_patch=$(
@@ -233,14 +233,14 @@ while IFS=$'\t' read -r raw_model product; do
     )
   fi
   if [[ -z $security_patch ]]; then
-    fallback_day=$(printf '%s' "$canary_suffix" | sed -nE 's/^[0-9]{6}([0-9]{2}).*$/\1/p')
+    fallback_day=$(printf '%s' "$release_suffix" | sed -nE 's/^[0-9]{6}([0-9]{2}).*$/\1/p')
     [[ -n $fallback_day ]] || fallback_day=05
     [[ -n $bulletin_month ]] || {
-      printf 'could not derive a canary patch month for %s\n' "$product" >&2
+      printf 'could not derive a release patch month for %s\n' "$product" >&2
       exit 1
     }
     security_patch="$bulletin_month-$fallback_day"
-    printf 'using canary-derived patch %s for %s\n' "$security_patch" "$product" >&2
+    printf 'using release-derived patch %s for %s\n' "$security_patch" "$product" >&2
   fi
 
   printf '%s\t%s\tGoogle\t%s\n' "$fingerprint" "$security_patch" "$model" >> "$entries_tsv"
@@ -252,7 +252,7 @@ done < <(paste "$models_file" "$products_file")
   exit 1
 }
 
-candidate_output="$tmpdir/pif-canary.json"
+candidate_output="$tmpdir/pif-data.json"
 perl - "$entries_tsv" "$candidate_output" <<'PERL'
 use strict;
 use warnings;
@@ -278,6 +278,6 @@ open my $out, '>', $output or die "cannot write $output: $!\n";
 print {$out} JSON::PP->new->canonical(1)->pretty(1)->encode(\@entries);
 PERL
 
-"$script_dir/validate-canary.sh" "$candidate_output"
+"$script_dir/validate-pixel-data.sh" "$candidate_output"
 mv "$candidate_output" "$output"
 printf 'wrote %d entries to %s\n' "$entry_count" "$output"
