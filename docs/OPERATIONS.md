@@ -1,8 +1,9 @@
 # Canary crawler operations
 
 This repository is the owner-controlled source for the DeviceMasker Pixel
-canary list. It does not publish a catalog release. GitHub Actions writes one
-generated file directly to `main`:
+canary list. It does not publish a catalog release. GitHub Actions prepares one
+generated file on the `automation/pif-canary-update` branch and promotes it to
+protected `main` through a pull request:
 
 ```text
 data/pif-canary.json
@@ -42,14 +43,18 @@ The `crawl-canary.yml` workflow runs at `03:17 UTC` and can also be started
 manually from the Actions tab. The workflow:
 
 1. checks out `main`;
-2. runs the shell crawler into a temporary candidate path;
-3. validates the complete JSON array;
-4. stages only `data/pif-canary.json`;
-5. exits without a commit when bytes are unchanged;
-6. commits and pushes the changed file with the repository `GITHUB_TOKEN`.
+2. prepares or updates `automation/pif-canary-update` from `main`;
+3. runs the shell crawler and validates the complete JSON array;
+4. exits without a commit when bytes are unchanged;
+5. commits and pushes only `data/pif-canary.json` to the automation branch;
+6. opens or refreshes a pull request and dispatches the `producer` validation
+   workflow for that branch;
+7. leaves the protected-branch merge to the repository owner after review.
 
 The workflow uses one concurrency group so two crawls cannot publish over one
 another. It does not upload an artifact, create a tag, or create a release.
+The branch/PR path is required because this repository's `main` branch rejects
+direct pushes.
 
 ## Output contract
 
@@ -73,15 +78,16 @@ missing, the workflow fails before touching the tracked file.
 
 ## App boundary
 
-The Android app will later fetch the public raw URL and adapt this four-field
-array into its local profile list. It will not execute this shell crawler,
-access Google directly, consume workflow artifacts, or depend on a GitHub
-Release. App integration is intentionally not part of this repository change.
+The Android app will later fetch the public raw URL after the owner merges the
+automation pull request and adapt this four-field array into its local profile
+list. It will not execute this shell crawler, access Google directly, consume
+workflow artifacts, or depend on a GitHub Release. App integration is
+intentionally not part of this repository change.
 
 ## Recovery
 
 - Source/API failure: keep the previous `data/pif-canary.json` and inspect the
-  failed workflow log.
+  failed workflow log; no pull request should be merged.
 - Malformed output: fix the crawler or upstream parser, run the local shell
   checks, then dispatch the workflow again.
 - Unexpected model or fingerprint: do not add a manual entry; correct the
