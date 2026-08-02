@@ -3,11 +3,11 @@ set -Eeuo pipefail
 
 usage() {
   cat <<'USAGE'
-usage: scripts/crawl-pixel-data.sh [--output data/pif-data.json]
+usage: scripts/crawl-pixel-data.sh [--output pif.json]
 USAGE
 }
 
-output=data/pif-data.json
+output=pif.json
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --output)
@@ -252,7 +252,7 @@ done < <(paste "$models_file" "$products_file")
   exit 1
 }
 
-candidate_output="$tmpdir/pif-data.json"
+candidate_output="$tmpdir/pif.json"
 perl - "$entries_tsv" "$candidate_output" <<'PERL'
 use strict;
 use warnings;

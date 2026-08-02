@@ -12,7 +12,7 @@ legacy producer leftovers from the local PIF checkout.
 
 ## Canonical data boundary
 
-`data/pif-data.json` on `main` remains the canonical app source. The
+`pif.json` on `main` remains the canonical app source. The
 runtime artifact is an exact copy of the same validated JSON for run inspection
 or later handoff; the Android app must not depend on artifact retention,
 artifact IDs, or the Actions API.
@@ -37,7 +37,7 @@ keys, or raw source HTML.
 The workflow uploads two artifacts with `actions/upload-artifact`:
 
 1. `pif-runtime-${{ github.run_id }}`
-   - `pif-data.json`, exactly the validated four-field array;
+   - `pif.json`, exactly the validated four-field array;
    - retention: 14 days;
    - purpose: run-scoped runtime mirror and handoff, not the app endpoint.
 2. `pif-diagnostics-${{ github.run_id }}`
@@ -55,7 +55,7 @@ JSON. The job remains failed when crawling or validation fails.
 
 - A successful unchanged crawl writes a summary and artifacts, then exits
   without a commit or pull request.
-- A successful changed crawl commits only `data/pif-data.json` directly to
+- A successful changed crawl commits only `pif.json` directly to
   `main`; no automation branch or pull request is created.
 - A failed crawl or validation never commits data and still uploads diagnostics
   plus any existing runtime JSON.
@@ -77,7 +77,7 @@ tests/__pycache__/
 ```
 
 These paths contain no tracked files in the current repository. Their removal
-must not touch `data/`, current shell scripts/tests, the root app, or any root
+must not touch `pif.json`, current shell scripts/tests, the root app, or any root
 research report. No placeholder files will be added to preserve empty legacy
 directories.
 
@@ -85,7 +85,7 @@ directories.
 
 - `actionlint` passes for both workflows;
 - `bash tests/test-pixel-data.sh` passes;
-- `bash scripts/validate-pixel-data.sh data/pif-data.json` passes;
+- `bash scripts/validate-pixel-data.sh pif.json` passes;
 - `git diff --check` passes;
 - a hosted `workflow_dispatch` run shows the new Summary and both artifacts;
 - nested PIF `main` contains only the intended commits and remains clean.

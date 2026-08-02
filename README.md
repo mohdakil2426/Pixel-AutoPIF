@@ -9,7 +9,7 @@ the Android app. It produces one generated JSON file for the app to fetch
 later:
 
 ```text
-data/pif-data.json
+pif.json
 ```
 
 Each entry contains exactly four fields:
@@ -41,8 +41,8 @@ The live crawl requires Bash, curl, Perl with the standard JSON::PP module,
 grep, sed, sort, tac, and paste:
 
 ```bash
-bash scripts/crawl-pixel-data.sh --output data/pif-data.json
-bash scripts/validate-pixel-data.sh data/pif-data.json
+bash scripts/crawl-pixel-data.sh --output pif.json
+bash scripts/validate-pixel-data.sh pif.json
 ```
 
 The crawler writes a temporary file and replaces the tracked JSON only after
@@ -53,7 +53,7 @@ the complete crawl and validation succeed.
 For the public repository, the future app action will fetch:
 
 ```text
-https://raw.githubusercontent.com/mohdakil2426/Pixel-AutoPIF/main/data/pif-data.json
+https://raw.githubusercontent.com/mohdakil2426/Pixel-AutoPIF/main/pif.json
 ```
 
 The app integration is intentionally separate from this repository change.
@@ -66,6 +66,6 @@ Releases, release assets, or signing keys.
 
 `.github/workflows/crawl-pixel-data.yml` runs daily at 03:17 UTC and supports
 `workflow_dispatch`. It writes a detailed GitHub Actions Summary, uploads the
-runtime/diagnostic artifacts, and pushes only changed `data/pif-data.json`
+runtime/diagnostic artifacts, and pushes only changed `pif.json`
 bytes directly to `main`. No PR or automation branch is created. A failed
 crawl leaves the previous committed file untouched.

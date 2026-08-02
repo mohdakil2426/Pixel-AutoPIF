@@ -5,7 +5,7 @@ canary list. It does not publish a catalog release. The generated file is
 committed directly to `main` when a validated crawl changes its bytes:
 
 ```text
-data/pif-data.json
+pif.json
 ```
 
 ## Local validation
@@ -19,8 +19,8 @@ bash tests/test-pixel-data.sh
 To perform a live crawl locally:
 
 ```bash
-bash scripts/crawl-pixel-data.sh --output data/pif-data.json
-bash scripts/validate-pixel-data.sh data/pif-data.json
+bash scripts/crawl-pixel-data.sh --output pif.json
+bash scripts/validate-pixel-data.sh pif.json
 ```
 
 The live crawler follows the same sequence as PlayIntegrityFix:
@@ -46,7 +46,7 @@ manually from the Actions tab. The workflow:
 3. runs the shell crawler and validates the complete JSON array;
 4. writes the run summary and uploads runtime/diagnostic artifacts;
 5. exits without a commit when bytes are unchanged;
-6. commits and pushes only `data/pif-data.json` directly to `main` when bytes
+6. commits and pushes only `pif.json` directly to `main` when bytes
    changed;
 7. runs the final result check so failed crawl, validation, or push status makes
    the workflow fail.
@@ -85,7 +85,7 @@ Release. App integration is intentionally not part of this repository change.
 
 ## Recovery
 
-- Source/API failure: keep the previous `data/pif-data.json`, inspect the
+- Source/API failure: keep the previous `pif.json`, inspect the
   failed workflow log and diagnostic artifact, and do not publish a commit.
 - Malformed output: fix the crawler or upstream parser, run the local shell
   checks, then dispatch the workflow again.

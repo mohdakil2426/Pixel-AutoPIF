@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-json_file=${1:?usage: scripts/pixel-data-metrics.sh data/pif-data.json}
+json_file=${1:?usage: scripts/pixel-data-metrics.sh pif.json}
 
 if [[ ! -f $json_file ]]; then
   printf '0\tNone\t-\t-\n'

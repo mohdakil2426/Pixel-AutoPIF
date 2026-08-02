@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: pif-data-crawl
+  group: pif-crawl
   cancel-in-progress: false
 
 permissions:
@@ -33,9 +33,9 @@ jobs:
           diagnostics_dir="$artifact_root/diagnostics"
           mkdir -p "$runtime_dir" "$diagnostics_dir"
           before_sha=missing
-          if [[ -f data/pif-data.json ]]; then
-            cp data/pif-data.json "$runtime_dir/pif-data.json"
-            before_sha=$(sha256sum data/pif-data.json | cut -d ' ' -f1)
+          if [[ -f pif.json ]]; then
+            cp pif.json "$runtime_dir/pif.json"
+            before_sha=$(sha256sum pif.json | cut -d ' ' -f1)
           fi
           printf 'before_sha=%s\n' "$before_sha" >> "$GITHUB_OUTPUT"
 
@@ -47,7 +47,7 @@ jobs:
           set -o pipefail
           set +e
           mkdir -p "$RUNNER_TEMP/pif-artifacts/diagnostics"
-          bash scripts/crawl-pixel-data.sh --output data/pif-data.json \
+          bash scripts/crawl-pixel-data.sh --output pif.json \
             2>&1 | tee "$RUNNER_TEMP/pif-artifacts/diagnostics/crawl.log"
           status=${PIPESTATUS[0]}
           printf 'status=%s\n' "$status" >> "$GITHUB_OUTPUT"
@@ -62,7 +62,7 @@ jobs:
           set -o pipefail
           set +e
           mkdir -p "$RUNNER_TEMP/pif-artifacts/diagnostics"
-          bash scripts/validate-pixel-data.sh data/pif-data.json \
+          bash scripts/validate-pixel-data.sh pif.json \
             2>&1 | tee "$RUNNER_TEMP/pif-artifacts/diagnostics/validation.log"
           status=${PIPESTATUS[0]}
           printf 'status=%s\n' "$status" >> "$GITHUB_OUTPUT"
@@ -84,11 +84,11 @@ jobs:
           artifact_root="$RUNNER_TEMP/pif-artifacts"
           runtime_dir="$artifact_root/runtime"
           diagnostics_dir="$artifact_root/diagnostics"
-          json_file=data/pif-data.json
+          json_file=pif.json
           mkdir -p "$runtime_dir" "$diagnostics_dir"
 
           if [[ -f "$json_file" ]]; then
-            cp "$json_file" "$runtime_dir/pif-data.json"
+            cp "$json_file" "$runtime_dir/pif.json"
           fi
 
           after_sha=missing
@@ -172,8 +172,8 @@ jobs:
           status=0
           git config user.name "github-actions[bot]" || status=$?
           if (( status == 0 )); then git config user.email "41898282+github-actions[bot]@users.noreply.github.com" || status=$?; fi
-          if (( status == 0 )); then git add data/pif-data.json || status=$?; fi
-          if (( status == 0 )); then git commit -m "chore(pif-data): refresh Pixel data" || status=$?; fi
+          if (( status == 0 )); then git add pif.json || status=$?; fi
+          if (( status == 0 )); then git commit -m "chore(pif): refresh pif.json" || status=$?; fi
           if (( status == 0 )); then git push origin HEAD:main || status=$?; fi
           printf 'status=%s\n' "$status" >> "$GITHUB_OUTPUT"
           exit 0
