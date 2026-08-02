@@ -1,7 +1,6 @@
 name: Validate producer
 
 on:
-  pull_request:
   push:
     branches:
       - main
@@ -15,4 +14,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.0.1
-      - run: bash tests/test-canary.sh
+      - run: bash tests/test-pixel-data.sh

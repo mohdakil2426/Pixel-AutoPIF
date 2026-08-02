@@ -1,12 +1,11 @@
-# Canary crawler operations
+# Pixel data crawler operations
 
 This repository is the owner-controlled source for the DeviceMasker Pixel
-canary list. It does not publish a catalog release. GitHub Actions prepares one
-generated file on the `automation/pif-canary-update` branch and promotes it to
-protected `main` through a pull request:
+canary list. It does not publish a catalog release. The generated file is
+committed directly to `main` when a validated crawl changes its bytes:
 
 ```text
-data/pif-canary.json
+data/pif-data.json
 ```
 
 ## Local validation
@@ -14,14 +13,14 @@ data/pif-canary.json
 Run from the repository root:
 
 ```bash
-bash tests/test-canary.sh
+bash tests/test-pixel-data.sh
 ```
 
 To perform a live crawl locally:
 
 ```bash
-bash scripts/crawl-canary.sh --output data/pif-canary.json
-bash scripts/validate-canary.sh data/pif-canary.json
+bash scripts/crawl-pixel-data.sh --output data/pif-data.json
+bash scripts/validate-pixel-data.sh data/pif-data.json
 ```
 
 The live crawler follows the same sequence as PlayIntegrityFix:
@@ -39,22 +38,23 @@ The live crawler follows the same sequence as PlayIntegrityFix:
 
 ## Scheduled workflow
 
-The `crawl-canary.yml` workflow runs at `03:17 UTC` and can also be started
+The `crawl-pixel-data.yml` workflow runs at `03:17 UTC` and can also be started
 manually from the Actions tab. The workflow:
 
 1. checks out `main`;
-2. prepares or updates `automation/pif-canary-update` from `main`;
+2. records the baseline JSON hash;
 3. runs the shell crawler and validates the complete JSON array;
-4. exits without a commit when bytes are unchanged;
-5. commits and pushes only `data/pif-canary.json` to the automation branch;
-6. opens or refreshes a pull request and dispatches the `producer` validation
-   workflow for that branch;
-7. leaves the protected-branch merge to the repository owner after review.
+4. writes the run summary and uploads runtime/diagnostic artifacts;
+5. exits without a commit when bytes are unchanged;
+6. commits and pushes only `data/pif-data.json` directly to `main` when bytes
+   changed;
+7. runs the final result check so failed crawl, validation, or push status makes
+   the workflow fail.
 
 The workflow uses one concurrency group so two crawls cannot publish over one
-another. It does not upload an artifact, create a tag, or create a release.
-The branch/PR path is required because this repository's `main` branch rejects
-direct pushes.
+another. It uploads two 14-day artifacts: a validated runtime JSON mirror and a
+diagnostic bundle containing the summary, hashes, diff, and logs. It does not
+create a tag or release, and it does not create a pull request or branch.
 
 ## Output contract
 
@@ -78,16 +78,15 @@ missing, the workflow fails before touching the tracked file.
 
 ## App boundary
 
-The Android app will later fetch the public raw URL after the owner merges the
-automation pull request and adapt this four-field array into its local profile
-list. It will not execute this shell crawler, access Google directly, consume
-workflow artifacts, or depend on a GitHub Release. App integration is
-intentionally not part of this repository change.
+The Android app will later fetch the public raw URL and adapt this four-field
+array into its local profile list. It will not execute this shell crawler,
+access Google directly, consume workflow artifacts, or depend on a GitHub
+Release. App integration is intentionally not part of this repository change.
 
 ## Recovery
 
-- Source/API failure: keep the previous `data/pif-canary.json` and inspect the
-  failed workflow log; no pull request should be merged.
+- Source/API failure: keep the previous `data/pif-data.json`, inspect the
+  failed workflow log and diagnostic artifact, and do not publish a commit.
 - Malformed output: fix the crawler or upstream parser, run the local shell
   checks, then dispatch the workflow again.
 - Unexpected model or fingerprint: do not add a manual entry; correct the

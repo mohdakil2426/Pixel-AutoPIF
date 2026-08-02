@@ -1,7 +1,7 @@
 # PIF Action Summary, Artifacts, and Legacy Cleanup Design
 
-Date: 2026-08-02  
-Status: Proposed for review  
+Date: 2026-08-02
+Status: Approved for implementation
 Scope: `external/Pixel-AutoPIF` only; no DeviceMasker app changes.
 
 ## Goal
@@ -12,7 +12,7 @@ legacy producer leftovers from the local PIF checkout.
 
 ## Canonical data boundary
 
-`data/pif-canary.json` on merged `main` remains the canonical app source. The
+`data/pif-data.json` on `main` remains the canonical app source. The
 runtime artifact is an exact copy of the same validated JSON for run inspection
 or later handoff; the Android app must not depend on artifact retention,
 artifact IDs, or the Actions API.
@@ -26,7 +26,7 @@ The crawl workflow will write `$GITHUB_STEP_SUMMARY` with:
 - generated entry count and model list;
 - minimum/maximum security patch dates;
 - before/after JSON SHA-256 values and changed/unchanged result;
-- automation branch and pull-request URL/number when a data diff exists;
+- direct-main publish status when a data diff exists;
 - names and retention of the uploaded artifacts.
 
 The summary will never include Flash Station API keys, request URLs containing
@@ -36,15 +36,15 @@ keys, or raw source HTML.
 
 The workflow uploads two artifacts with `actions/upload-artifact`:
 
-1. `pif-canary-runtime-${{ github.run_id }}`
-   - `pif-canary.json`, exactly the validated four-field array;
+1. `pif-runtime-${{ github.run_id }}`
+   - `pif-data.json`, exactly the validated four-field array;
    - retention: 14 days;
    - purpose: run-scoped runtime mirror and handoff, not the app endpoint.
-2. `pif-canary-diagnostics-${{ github.run_id }}`
+2. `pif-diagnostics-${{ github.run_id }}`
    - `summary.md`;
    - `data.diff`;
    - `crawl.log` and `validation.log`;
-   - `metadata.txt` with non-secret hashes, counts, statuses, and PR data;
+   - `metadata.txt` with non-secret hashes, counts, and statuses;
    - retention: 14 days.
 
 Both upload steps use `if: always()` and `if-no-files-found: warn`, so a
@@ -55,9 +55,8 @@ JSON. The job remains failed when crawling or validation fails.
 
 - A successful unchanged crawl writes a summary and artifacts, then exits
   without a commit or pull request.
-- A successful changed crawl commits only `data/pif-canary.json` to
-  `automation/pif-canary-update`, opens or refreshes the protected-main PR, and
-  dispatches producer validation for that branch.
+- A successful changed crawl commits only `data/pif-data.json` directly to
+  `main`; no automation branch or pull request is created.
 - A failed crawl or validation never commits data and still uploads diagnostics
   plus any existing runtime JSON.
 
@@ -85,9 +84,8 @@ directories.
 ## Validation
 
 - `actionlint` passes for both workflows;
-- `bash tests/test-canary.sh` passes;
-- `bash scripts/validate-canary.sh data/pif-canary.json` passes;
+- `bash tests/test-pixel-data.sh` passes;
+- `bash scripts/validate-pixel-data.sh data/pif-data.json` passes;
 - `git diff --check` passes;
 - a hosted `workflow_dispatch` run shows the new Summary and both artifacts;
 - nested PIF `main` contains only the intended commits and remains clean.
-

@@ -1,0 +1,237 @@
+name: Refresh Pixel data
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: pif-data-crawl
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.0.1
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Capture baseline
+        id: baseline
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          artifact_root="$RUNNER_TEMP/pif-artifacts"
+          runtime_dir="$artifact_root/runtime"
+          diagnostics_dir="$artifact_root/diagnostics"
+          mkdir -p "$runtime_dir" "$diagnostics_dir"
+          before_sha=missing
+          if [[ -f data/pif-data.json ]]; then
+            cp data/pif-data.json "$runtime_dir/pif-data.json"
+            before_sha=$(sha256sum data/pif-data.json | cut -d ' ' -f1)
+          fi
+          printf 'before_sha=%s\n' "$before_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Crawl Pixel data
+        id: crawl
+        shell: bash
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          set +e
+          mkdir -p "$RUNNER_TEMP/pif-artifacts/diagnostics"
+          bash scripts/crawl-pixel-data.sh --output data/pif-data.json \
+            2>&1 | tee "$RUNNER_TEMP/pif-artifacts/diagnostics/crawl.log"
+          status=${PIPESTATUS[0]}
+          printf 'status=%s\n' "$status" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Validate Pixel data
+        id: validate
+        if: always()
+        shell: bash
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          set +e
+          mkdir -p "$RUNNER_TEMP/pif-artifacts/diagnostics"
+          bash scripts/validate-pixel-data.sh data/pif-data.json \
+            2>&1 | tee "$RUNNER_TEMP/pif-artifacts/diagnostics/validation.log"
+          status=${PIPESTATUS[0]}
+          printf 'status=%s\n' "$status" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Build run summary
+        id: summary
+        if: always()
+        shell: bash
+        env:
+          CRAWL_STATUS: ${{ steps.crawl.outputs.status }}
+          VALIDATE_STATUS: ${{ steps.validate.outputs.status }}
+          BEFORE_SHA: ${{ steps.baseline.outputs.before_sha }}
+        run: |
+          set -Eeuo pipefail
+          CRAWL_STATUS="${CRAWL_STATUS:-not-run}"
+          VALIDATE_STATUS="${VALIDATE_STATUS:-not-run}"
+          BEFORE_SHA="${BEFORE_SHA:-missing}"
+          artifact_root="$RUNNER_TEMP/pif-artifacts"
+          runtime_dir="$artifact_root/runtime"
+          diagnostics_dir="$artifact_root/diagnostics"
+          json_file=data/pif-data.json
+          mkdir -p "$runtime_dir" "$diagnostics_dir"
+
+          if [[ -f "$json_file" ]]; then
+            cp "$json_file" "$runtime_dir/pif-data.json"
+          fi
+
+          after_sha=missing
+          if [[ -f "$json_file" ]]; then
+            after_sha=$(sha256sum "$json_file" | cut -d ' ' -f1)
+          fi
+
+          changed=false
+          if [[ -f "$json_file" ]] && ! git diff --quiet -- "$json_file"; then
+            changed=true
+          fi
+
+          entry_count=0
+          model_list=None
+          patch_min=-
+          patch_max=-
+          if [[ -f "$json_file" ]]; then
+            IFS=$'\t' read -r entry_count model_list patch_min patch_max < <(
+              bash scripts/pixel-data-metrics.sh "$json_file"
+            )
+          fi
+
+          git diff --no-ext-diff -- "$json_file" > "$diagnostics_dir/data.diff" || true
+          if [[ ! -s "$diagnostics_dir/data.diff" ]]; then
+            printf '%s\n' 'No data diff.' > "$diagnostics_dir/data.diff"
+          fi
+
+          changed_files=$(git diff --name-status -- "$json_file" || true)
+          [[ -n "$changed_files" ]] || changed_files='None'
+          new_files=$(git ls-files --others --exclude-standard -- "$json_file" || true)
+          [[ -n "$new_files" ]] || new_files='None'
+          run_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          runtime_artifact="pif-runtime-$GITHUB_RUN_ID"
+          diagnostics_artifact="pif-diagnostics-$GITHUB_RUN_ID"
+
+          {
+            printf '# Pixel data crawl\n\n'
+            printf '| Field | Value |\n| --- | --- |\n'
+            printf '| Event | %s |\n' "$GITHUB_EVENT_NAME"
+            printf '| Ref | %s |\n' "$GITHUB_REF_NAME"
+            printf '| Commit | %s |\n' "$GITHUB_SHA"
+            printf '| Run | [%s](%s) |\n' "$GITHUB_RUN_ID" "$run_url"
+            printf '| Crawl status | %s |\n' "$CRAWL_STATUS"
+            printf '| Validation status | %s |\n' "$VALIDATE_STATUS"
+            printf '| Entries | %s |\n' "$entry_count"
+            printf '| Security patch range | %s → %s |\n' "$patch_min" "$patch_max"
+            printf '| Data changed | %s |\n' "$changed"
+            printf '| Before SHA-256 | %s |\n' "$BEFORE_SHA"
+            printf '| After SHA-256 | %s |\n' "$after_sha"
+            printf '| Runtime artifact | %s (14 days) |\n' "$runtime_artifact"
+            printf '| Diagnostics artifact | %s (14 days) |\n\n' "$diagnostics_artifact"
+            printf '## Models\n\n%s\n\n' "$model_list"
+            printf '## Changed files\n\n%s\n\n' "$changed_files"
+            printf '## New files\n\n%s\n' "$new_files"
+          } | tee "$diagnostics_dir/summary.md" >> "$GITHUB_STEP_SUMMARY"
+
+          {
+            printf 'event=%s\n' "$GITHUB_EVENT_NAME"
+            printf 'ref=%s\n' "$GITHUB_REF_NAME"
+            printf 'commit=%s\n' "$GITHUB_SHA"
+            printf 'run_url=%s\n' "$run_url"
+            printf 'crawl_status=%s\n' "$CRAWL_STATUS"
+            printf 'validation_status=%s\n' "$VALIDATE_STATUS"
+            printf 'entry_count=%s\n' "$entry_count"
+            printf 'models=%s\n' "$model_list"
+            printf 'patch_min=%s\n' "$patch_min"
+            printf 'patch_max=%s\n' "$patch_max"
+            printf 'changed=%s\n' "$changed"
+            printf 'before_sha256=%s\n' "$BEFORE_SHA"
+            printf 'after_sha256=%s\n' "$after_sha"
+          } > "$diagnostics_dir/metadata.txt"
+          printf 'changed=%s\n' "$changed" >> "$GITHUB_OUTPUT"
+
+      - name: Publish changed data directly to main
+        id: publish
+        if: steps.summary.outputs.changed == 'true' && steps.crawl.outputs.status == '0' && steps.validate.outputs.status == '0'
+        shell: bash
+        continue-on-error: true
+        run: |
+          set +e
+          status=0
+          git config user.name "github-actions[bot]" || status=$?
+          if (( status == 0 )); then git config user.email "41898282+github-actions[bot]@users.noreply.github.com" || status=$?; fi
+          if (( status == 0 )); then git add data/pif-data.json || status=$?; fi
+          if (( status == 0 )); then git commit -m "chore(pif-data): refresh Pixel data" || status=$?; fi
+          if (( status == 0 )); then git push origin HEAD:main || status=$?; fi
+          printf 'status=%s\n' "$status" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Finalize run summary
+        if: always()
+        shell: bash
+        env:
+          PUBLISH_STATUS: ${{ steps.publish.outputs.status }}
+        run: |
+          set -Eeuo pipefail
+          PUBLISH_STATUS="${PUBLISH_STATUS:-skipped}"
+          diagnostics_dir="$RUNNER_TEMP/pif-artifacts/diagnostics"
+          printf '\n## Publish result\n\n- Direct main push status: %s\n' "$PUBLISH_STATUS" >> "$GITHUB_STEP_SUMMARY"
+          if [[ -f "$diagnostics_dir/summary.md" ]]; then
+            printf '\n## Publish result\n\n- Direct main push status: %s\n' "$PUBLISH_STATUS" >> "$diagnostics_dir/summary.md"
+          fi
+          printf 'publish_status=%s\n' "$PUBLISH_STATUS" >> "$diagnostics_dir/metadata.txt"
+
+      - name: Upload runtime artifact
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: pif-runtime-${{ github.run_id }}
+          path: ${{ runner.temp }}/pif-artifacts/runtime/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload diagnostics artifact
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: pif-diagnostics-${{ github.run_id }}
+          path: ${{ runner.temp }}/pif-artifacts/diagnostics/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Enforce crawl result
+        if: always()
+        shell: bash
+        env:
+          CRAWL_STATUS: ${{ steps.crawl.outputs.status }}
+          VALIDATE_STATUS: ${{ steps.validate.outputs.status }}
+          PUBLISH_STATUS: ${{ steps.publish.outputs.status }}
+          CHANGED: ${{ steps.summary.outputs.changed }}
+        run: |
+          set -Eeuo pipefail
+          CRAWL_STATUS="${CRAWL_STATUS:-not-run}"
+          VALIDATE_STATUS="${VALIDATE_STATUS:-not-run}"
+          PUBLISH_STATUS="${PUBLISH_STATUS:-skipped}"
+          CHANGED="${CHANGED:-false}"
+          failures=()
+          [[ "$CRAWL_STATUS" == "0" ]] || failures+=("crawl=$CRAWL_STATUS")
+          [[ "$VALIDATE_STATUS" == "0" ]] || failures+=("validation=$VALIDATE_STATUS")
+          if [[ "$CHANGED" == "true" && "$PUBLISH_STATUS" != "0" ]]; then
+            failures+=("publish=$PUBLISH_STATUS")
+          fi
+          if (( ${#failures[@]} > 0 )); then
+            printf 'workflow failed: %s\n' "${failures[*]}" >&2
+            exit 1
+          fi
