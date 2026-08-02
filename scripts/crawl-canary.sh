@@ -193,13 +193,14 @@ while IFS=$'\t' read -r raw_model product; do
 
   printf 'Crawling %s (%s)...\n' "$model" "$product"
   station_json="$tmpdir/station-$entry_count.json"
+  reversed_json="$tmpdir/reversed-$entry_count.json"
   canary_json="$tmpdir/canary-$entry_count.json"
   curl --fail --silent --show-error --location --retry 2 --retry-all-errors \
     --connect-timeout 15 --max-time 45 --compressed \
     --user-agent "$USER_AGENT" --header "Referer: $FLASH_HOME" \
     "$FLASH_API?product=$product&key=$flash_key" -o "$station_json"
-  tac "$station_json" |
-    grep -m 1 -A 20 '"canary": true' > "$canary_json" || {
+  tac "$station_json" > "$reversed_json"
+  grep -m 1 -A 20 '"canary": true' "$reversed_json" > "$canary_json" || {
       printf 'no canary build found for %s\n' "$product" >&2
       exit 1
     }
