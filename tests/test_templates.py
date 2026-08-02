@@ -13,7 +13,7 @@ class TemplateTests(unittest.TestCase):
         Draft202012Validator(load_json("schemas/pixel-devices.schema.json")).validate(
             self.templates
         )
-        self.assertEqual(len(self.templates), 35)
+        self.assertEqual(len(self.templates), 21)
         for field in ("profileId", "device", "sourceId"):
             values = [item[field] for item in self.templates]
             self.assertEqual(len(values), len(set(values)))
@@ -26,9 +26,17 @@ class TemplateTests(unittest.TestCase):
 
     def test_first_and_current_official_models_are_covered_without_invented_fold_xl(self):
         names = {item["model"] for item in self.templates}
-        self.assertIn("Pixel", names)
+        self.assertIn("Pixel 6", names)
         self.assertIn("Pixel 10a", names)
         self.assertIn("Pixel 10 Pro Fold", names)
+        self.assertIn("Pixel Fold", names)
+        self.assertIn("Pixel Tablet", names)
+        self.assertNotIn("Pixel", names)
+        self.assertNotIn("Pixel XL", names)
+        self.assertFalse(any(name.startswith("Pixel 2") for name in names))
+        self.assertFalse(any(name.startswith("Pixel 3") for name in names))
+        self.assertFalse(any(name.startswith("Pixel 4") for name in names))
+        self.assertFalse(any(name.startswith("Pixel 5") for name in names))
         self.assertNotIn("Pixel 10 Pro Fold XL", names)
 
 

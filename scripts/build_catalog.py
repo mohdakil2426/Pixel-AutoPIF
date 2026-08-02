@@ -18,6 +18,8 @@ def resolve_version(previous: dict, current: dict, templates: list[dict]) -> int
     required = {item["device"] for item in templates}
     previous_devices = {item["device"] for item in previous["models"]}
     if previous_devices != required:
+        if previous_devices > required:
+            return previous["catalogVersion"] + 1
         return previous["catalogVersion"]
     return previous["catalogVersion"] + 1
 
@@ -32,7 +34,7 @@ def build_catalog(templates: list[dict], verified: list[dict], version: int, gen
         ):
             continue
         if candidate["modelKey"] not in by_device:
-            raise ValueError("verified candidate has no template")
+            continue
         grouped.setdefault(candidate["modelKey"], []).append(candidate)
     models: list[dict] = []
     global_fingerprints: set[str] = set()
