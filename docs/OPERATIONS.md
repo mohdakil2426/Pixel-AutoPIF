@@ -1,116 +1,90 @@
-# Catalog operations
+# Canary crawler operations
 
-The scheduled update runs daily at `03:17 UTC`. Discovery never publishes a
-release. It prepares one fixed automation branch for human review; a separate,
-manual workflow publishes only reviewed `main` bytes through the protected
-`catalog-production` environment.
+This repository is the owner-controlled source for the DeviceMasker Pixel
+canary list. It does not publish a catalog release. GitHub Actions writes one
+generated file directly to `main`:
+
+```text
+data/pif-canary.json
+```
 
 ## Local validation
 
 Run from the repository root:
 
-```powershell
-python -m pip install --require-hashes -r requirements.txt
-python -m unittest discover -s tests -p "test_*.py" -v
-python scripts/validate_coverage.py --templates templates/pixel-devices.json --verified data/verified-candidates.json
-python scripts/build_catalog.py --templates templates/pixel-devices.json --verified data/verified-candidates.json --output dist --previous catalog/pixel-catalog-current.json
-python scripts/validate_catalog.py --catalog dist/pixel-catalog-v1.json --schema schemas/pixel-catalog.schema.json
+```bash
+bash tests/test-canary.sh
 ```
 
-## Daily update and review
+To perform a live crawl locally:
 
-Trigger an unscheduled review when needed:
-
-```powershell
-gh workflow run update-catalog.yml --repo mohdakil2426/Pixel-AutoPIF
-gh run list --repo mohdakil2426/Pixel-AutoPIF --workflow update-catalog.yml --limit 5
-gh run watch <run-id> --repo mohdakil2426/Pixel-AutoPIF --exit-status
+```bash
+bash scripts/crawl-canary.sh --output data/pif-canary.json
+bash scripts/validate-canary.sh data/pif-canary.json
 ```
 
-No catalog diff is a successful no-op: no commit, branch update, PR, or release
-is required. When bytes change, review all of the following before merging:
+The live crawler follows the same sequence as PlayIntegrityFix:
 
-- every candidate disposition and rejection reason;
-- every official Google full-OTA URL and published SHA-256;
-- fingerprint, Build ID, incremental, SDK metadata, and security patch
-  extracted from the same OTA;
-- all 21 eligible model templates (Pixel 6+ plus Pixel Fold/Tablet) and at most
-  the newest three retained stable builds;
-- deterministic catalog bytes and an expected version change only;
-- the required `producer` check on the exact PR head.
+1. Fetch the Android platform versions page.
+2. Select the newest version page and its full-image/OTA tables.
+3. Select the table with the larger device set and pair model/product rows.
+4. Filter to Pixel 6+ phones, Fold, and Tablet; append `_beta` to products.
+5. Extract the Flash Station public API key from `flash.android.com`.
+6. Query the builds API with `Referer: https://flash.android.com`.
+7. Select the newest block marked `"canary": true`.
+8. Resolve the security patch from the Pixel bulletin, using the canary date
+   fallback only when an exact bulletin row is unavailable.
+9. Emit exactly `fingerprint`, `securityPatch`, `manufacturer`, and `model`.
 
-GitHub currently couples Actions-created PRs with permission for Actions to
-approve reviews. Keep that broader capability disabled. If the workflow pushes
-`automation/pixel-catalog-update` but cannot create the PR, the owner creates or
-updates the PR with `gh pr create`/`gh pr edit`, then reviews and merges it
-normally. Do not weaken branch protection to make automation merge itself.
+## Scheduled workflow
 
-## Protected release
+The `crawl-canary.yml` workflow runs at `03:17 UTC` and can also be started
+manually from the Actions tab. The workflow:
 
-After the reviewed update is merged, choose the next unused integer version and
-dispatch from `main`:
+1. checks out `main`;
+2. runs the shell crawler into a temporary candidate path;
+3. validates the complete JSON array;
+4. stages only `data/pif-canary.json`;
+5. exits without a commit when bytes are unchanged;
+6. commits and pushes the changed file with the repository `GITHUB_TOKEN`.
 
-```powershell
-gh workflow run release-catalog.yml --repo mohdakil2426/Pixel-AutoPIF --ref main -f version=<version>
-gh run list --repo mohdakil2426/Pixel-AutoPIF --workflow release-catalog.yml --limit 5
-gh run watch <run-id> --repo mohdakil2426/Pixel-AutoPIF --exit-status
+The workflow uses one concurrency group so two crawls cannot publish over one
+another. It does not upload an artifact, create a tag, or create a release.
+
+## Output contract
+
+The top-level value is a non-empty JSON array. Every object must contain
+exactly these keys:
+
+```json
+[
+  {
+    "fingerprint": "google/akita_beta/akita:CANARY/...:user/release-keys",
+    "securityPatch": "YYYY-MM-DD",
+    "manufacturer": "Google",
+    "model": "Pixel 8a"
+  }
+]
 ```
 
-Inspect the pending `catalog-production` deployment and approve only the exact
-reviewed commit/version. The job reruns tests and coverage, rebuilds canonical
-bytes, signs the catalog and manifest separately, refuses an existing tag or
-release, and publishes immutable assets. Existing app snapshots remain usable
-when an older build rotates out.
+No manually curated, recommended, prefixed, stable, or synthetic object may
+be committed. If the crawl returns no valid entries or any required value is
+missing, the workflow fails before touching the tracked file.
 
-## Independent verification
+## App boundary
 
-Download all four assets from an immutable `v<version>` release, then run:
+The Android app will later fetch the public raw URL and adapt this four-field
+array into its local profile list. It will not execute this shell crawler,
+access Google directly, consume workflow artifacts, or depend on a GitHub
+Release. App integration is intentionally not part of this repository change.
 
-```powershell
-python scripts/verify_release.py `
-  --manifest pixel-catalog.manifest.json `
-  --manifest-signature pixel-catalog.manifest.json.sig `
-  --catalog pixel-catalog-v<version>.json `
-  --catalog-signature pixel-catalog-v<version>.json.sig `
-  --public-key public-keys/pixel-autopif-p256-v1.spki.der.base64
-gh release verify v<version> --repo mohdakil2426/Pixel-AutoPIF
-```
+## Recovery
 
-The production public key is
-`public-keys/pixel-autopif-p256-v1.spki.der.base64`. Verification must never
-download, print, or expose the protected environment signing secret.
-
-## Failure recovery
-
-- Discovery/source failure: retain the last reviewed catalog, inspect the
-  failed run artifact/log, repair with tests, and rerun update. Never publish
-  partial coverage.
-- Invalid candidate or unexpected diff: do not merge; correct source parsing or
-  disposition data on a reviewed branch.
-- Release failure before publication: keep the version unused, fix through a
-  protected PR, and rerun only after review. Never replace existing immutable
-  assets.
-- Release exists but client verification fails: stop new releases, preserve all
-  evidence, and treat it as a signing/supply-chain incident.
-
-Permissions stay job-local. Analysis defaults to `contents: read`; only the
-automation-branch job adds `contents: write` and `pull-requests: write`; release
-alone gets `contents: write`. All external Actions are pinned to full commit
-SHAs.
-
-## Signing-key recovery and compromise
-
-The provisioning-time recovery directory is temporary. Copy its encrypted key
-and recovery passphrase to separate durable locations, verify recovery once,
-then remove the staging directory. Never publish its private local path, commit
-either value, or store both together.
-
-Key rotation is app-update-bound. On suspected compromise:
-
-1. disable protected releases and remove the environment secret;
-2. audit published releases and preserve immutable evidence;
-3. generate a new offline P-256 key and configure a new protected secret;
-4. update the Android app's pinned SPKI and key ID;
-5. release the updated app before publishing catalogs signed only by the new
-   key;
-6. resume releases after independent verification.
+- Source/API failure: keep the previous `data/pif-canary.json` and inspect the
+  failed workflow log.
+- Malformed output: fix the crawler or upstream parser, run the local shell
+  checks, then dispatch the workflow again.
+- Unexpected model or fingerprint: do not add a manual entry; correct the
+  discovery/filter logic and rerun.
+- Accidental data commit: revert the generated JSON commit normally; do not
+  force-push `main`.
