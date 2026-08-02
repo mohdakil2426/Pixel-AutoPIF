@@ -216,7 +216,7 @@ while IFS=$'\t' read -r raw_model product; do
     grep -m 1 '"id"' "$canary_json" |
       sed -nE 's/.*"id"[[:space:]]*:[[:space:]]*"canary-([^"]+)".*/\1/p'
   )
-  [[ -n $release_id && -n $incremental ]] || {
+  [[ -n $release_id && -n $incremental && -n $canary_suffix ]] || {
     printf 'missing canary release data for %s\n' "$product" >&2
     exit 1
   }
@@ -234,7 +234,10 @@ while IFS=$'\t' read -r raw_model product; do
   if [[ -z $security_patch ]]; then
     fallback_day=$(printf '%s' "$canary_suffix" | sed -nE 's/^[0-9]{6}([0-9]{2}).*$/\1/p')
     [[ -n $fallback_day ]] || fallback_day=05
-    [[ -n $bulletin_month ]] || bulletin_month=1970-01
+    [[ -n $bulletin_month ]] || {
+      printf 'could not derive a canary patch month for %s\n' "$product" >&2
+      exit 1
+    }
     security_patch="$bulletin_month-$fallback_day"
     printf 'using canary-derived patch %s for %s\n' "$security_patch" "$product" >&2
   fi
