@@ -63,6 +63,8 @@ artifacts required by the runtime contract.
 ## Automation
 
 `.github/workflows/crawl-canary.yml` runs daily at 03:17 UTC and supports
-`workflow_dispatch`. It commits `data/pif-canary.json` to `main` only when
-serialized bytes change. A failed crawl leaves the previous committed file
-untouched.
+`workflow_dispatch`. It updates a single `automation/pif-canary-update` branch
+and opens or refreshes a pull request against protected `main` only when
+serialized bytes change. Run the `producer` validation workflow on that branch,
+review the four-field diff, and merge the pull request. A failed crawl leaves
+the previous committed file untouched.
