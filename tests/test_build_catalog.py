@@ -66,6 +66,21 @@ class BuildCatalogTests(unittest.TestCase):
         self.assertEqual(1, resolve_version(partial, complete, required))
         self.assertEqual(2, resolve_version(complete, changed, required))
 
+    def test_removing_old_models_advances_catalog_version(self):
+        previous = {"catalogVersion": 1, "models": [{"device": "old"}, {"device": "keep"}]}
+        current = {"catalogVersion": 1, "models": [{"device": "keep"}]}
+
+        self.assertEqual(2, resolve_version(previous, current, [{"device": "keep"}]))
+
+    def test_ignores_verified_candidates_for_removed_models(self):
+        removed = self.base | {"modelKey": "redfin"}
+
+        catalog = build_catalog(
+            self.templates, [self.base, removed], 2, "2026-07-30T00:00:00Z"
+        )
+
+        self.assertEqual(["pixel_comet"], [item["profileId"] for item in catalog["models"]])
+
 
 if __name__ == "__main__":
     unittest.main()

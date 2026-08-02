@@ -34,7 +34,8 @@ is required. When bytes change, review all of the following before merging:
 - every official Google full-OTA URL and published SHA-256;
 - fingerprint, Build ID, incremental, SDK metadata, and security patch
   extracted from the same OTA;
-- all 35 model templates and at most the newest three retained stable builds;
+- all 21 eligible model templates (Pixel 6+ plus Pixel Fold/Tablet) and at most
+  the newest three retained stable builds;
 - deterministic catalog bytes and an expected version change only;
 - the required `producer` check on the exact PR head.
 
