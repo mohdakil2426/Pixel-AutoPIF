@@ -1,122 +1,122 @@
 [
    {
-      "fingerprint" : "google/oriole_beta/oriole:CANARY/ZP11.260618.005/15760424:user/release-keys",
+      "fingerprint" : "google/oriole_beta/oriole:CANARY/ZP11.260717.006/16004061:user/release-keys",
       "manufacturer" : "Google",
       "model" : "Pixel 6",
-      "securityPatch" : "2026-07-05"
+      "securityPatch" : "2026-08-05"
    },
    {
-      "fingerprint" : "google/raven_beta/raven:CANARY/ZP11.260618.005/15760424:user/release-keys",
+      "fingerprint" : "google/raven_beta/raven:CANARY/ZP11.260717.006/16004061:user/release-keys",
       "manufacturer" : "Google",
       "model" : "Pixel 6 Pro",
-      "securityPatch" : "2026-07-05"
+      "securityPatch" : "2026-08-05"
    },
    {
-      "fingerprint" : "google/bluejay_beta/bluejay:CANARY/ZP11.260618.005/15760424:user/release-keys",
+      "fingerprint" : "google/bluejay_beta/bluejay:CANARY/ZP11.260717.006/16004061:user/release-keys",
       "manufacturer" : "Google",
       "model" : "Pixel 6a",
-      "securityPatch" : "2026-07-05"
+      "securityPatch" : "2026-08-05"
    },
    {
-      "fingerprint" : "google/panther_beta/panther:CANARY/ZP11.260618.005/15760424:user/release-keys",
+      "fingerprint" : "google/panther_beta/panther:CANARY/ZP11.260717.006/16004061:user/release-keys",
       "manufacturer" : "Google",
       "model" : "Pixel 7",
-      "securityPatch" : "2026-07-05"
+      "securityPatch" : "2026-08-05"
    },
    {
-      "fingerprint" : "google/cheetah_beta/cheetah:CANARY/ZP11.260618.005/15760424:user/release-keys",
+      "fingerprint" : "google/cheetah_beta/cheetah:CANARY/ZP11.260717.006/16004061:user/release-keys",
       "manufacturer" : "Google",
       "model" : "Pixel 7 Pro",
-      "securityPatch" : "2026-07-05"
+      "securityPatch" : "2026-08-05"
    },
    {
-      "fingerprint" : "google/lynx_beta/lynx:CANARY/ZP11.260618.005/15760424:user/release-keys",
+      "fingerprint" : "google/lynx_beta/lynx:CANARY/ZP11.260717.006/16004061:user/release-keys",
       "manufacturer" : "Google",
       "model" : "Pixel 7a",
-      "securityPatch" : "2026-07-05"
+      "securityPatch" : "2026-08-05"
    },
    {
-      "fingerprint" : "google/felix_beta/felix:CANARY/ZP11.260618.005/15760424:user/release-keys",
+      "fingerprint" : "google/felix_beta/felix:CANARY/ZP11.260717.006/16004061:user/release-keys",
       "manufacturer" : "Google",
       "model" : "Pixel Fold",
-      "securityPatch" : "2026-07-05"
+      "securityPatch" : "2026-08-05"
    },
    {
-      "fingerprint" : "google/tangorpro_beta/tangorpro:CANARY/ZP11.260618.005/15760424:user/release-keys",
+      "fingerprint" : "google/tangorpro_beta/tangorpro:CANARY/ZP11.260717.006/16004061:user/release-keys",
       "manufacturer" : "Google",
       "model" : "Pixel Tablet",
-      "securityPatch" : "2026-07-05"
+      "securityPatch" : "2026-08-05"
    },
    {
-      "fingerprint" : "google/shiba_beta/shiba:CANARY/ZP11.260618.005/15760424:user/release-keys",
+      "fingerprint" : "google/shiba_beta/shiba:CANARY/ZP11.260717.006/16004061:user/release-keys",
       "manufacturer" : "Google",
       "model" : "Pixel 8",
-      "securityPatch" : "2026-07-05"
+      "securityPatch" : "2026-08-05"
    },
    {
-      "fingerprint" : "google/husky_beta/husky:CANARY/ZP11.260618.005/15760424:user/release-keys",
+      "fingerprint" : "google/husky_beta/husky:CANARY/ZP11.260717.006/16004061:user/release-keys",
       "manufacturer" : "Google",
       "model" : "Pixel 8 Pro",
-      "securityPatch" : "2026-07-05"
+      "securityPatch" : "2026-08-05"
    },
    {
-      "fingerprint" : "google/akita_beta/akita:CANARY/ZP11.260618.005/15760424:user/release-keys",
+      "fingerprint" : "google/akita_beta/akita:CANARY/ZP11.260717.006/16004061:user/release-keys",
       "manufacturer" : "Google",
       "model" : "Pixel 8a",
-      "securityPatch" : "2026-07-05"
+      "securityPatch" : "2026-08-05"
    },
    {
-      "fingerprint" : "google/tokay_beta/tokay:CANARY/ZP11.260618.005/15760424:user/release-keys",
+      "fingerprint" : "google/tokay_beta/tokay:CANARY/ZP11.260717.006/16004061:user/release-keys",
       "manufacturer" : "Google",
       "model" : "Pixel 9",
-      "securityPatch" : "2026-07-05"
+      "securityPatch" : "2026-08-05"
    },
    {
-      "fingerprint" : "google/caiman_beta/caiman:CANARY/ZP11.260618.005/15760424:user/release-keys",
+      "fingerprint" : "google/caiman_beta/caiman:CANARY/ZP11.260717.006/16004061:user/release-keys",
       "manufacturer" : "Google",
       "model" : "Pixel 9 Pro",
-      "securityPatch" : "2026-07-05"
+      "securityPatch" : "2026-08-05"
    },
    {
-      "fingerprint" : "google/komodo_beta/komodo:CANARY/ZP11.260618.005/15760424:user/release-keys",
+      "fingerprint" : "google/komodo_beta/komodo:CANARY/ZP11.260717.006/16004061:user/release-keys",
       "manufacturer" : "Google",
       "model" : "Pixel 9 Pro XL",
-      "securityPatch" : "2026-07-05"
+      "securityPatch" : "2026-08-05"
    },
    {
-      "fingerprint" : "google/comet_beta/comet:CANARY/ZP11.260618.005/15760424:user/release-keys",
+      "fingerprint" : "google/comet_beta/comet:CANARY/ZP11.260717.006/16004061:user/release-keys",
       "manufacturer" : "Google",
       "model" : "Pixel 9 Pro Fold",
-      "securityPatch" : "2026-07-05"
+      "securityPatch" : "2026-08-05"
    },
    {
-      "fingerprint" : "google/tegu_beta/tegu:CANARY/ZP11.260618.005/15760424:user/release-keys",
+      "fingerprint" : "google/tegu_beta/tegu:CANARY/ZP11.260717.006/16004061:user/release-keys",
       "manufacturer" : "Google",
       "model" : "Pixel 9a",
-      "securityPatch" : "2026-07-05"
+      "securityPatch" : "2026-08-05"
    },
    {
-      "fingerprint" : "google/frankel_beta/frankel:CANARY/ZP11.260618.005/15760424:user/release-keys",
+      "fingerprint" : "google/frankel_beta/frankel:CANARY/ZP11.260717.006/16004061:user/release-keys",
       "manufacturer" : "Google",
       "model" : "Pixel 10",
-      "securityPatch" : "2026-07-05"
+      "securityPatch" : "2026-08-05"
    },
    {
-      "fingerprint" : "google/blazer_beta/blazer:CANARY/ZP11.260618.005/15760424:user/release-keys",
+      "fingerprint" : "google/blazer_beta/blazer:CANARY/ZP11.260717.006/16004061:user/release-keys",
       "manufacturer" : "Google",
       "model" : "Pixel 10 Pro",
-      "securityPatch" : "2026-07-05"
+      "securityPatch" : "2026-08-05"
    },
    {
-      "fingerprint" : "google/mustang_beta/mustang:CANARY/ZP11.260618.005/15760424:user/release-keys",
+      "fingerprint" : "google/mustang_beta/mustang:CANARY/ZP11.260717.006/16004061:user/release-keys",
       "manufacturer" : "Google",
       "model" : "Pixel 10 Pro XL",
-      "securityPatch" : "2026-07-05"
+      "securityPatch" : "2026-08-05"
    },
    {
-      "fingerprint" : "google/rango_beta/rango:CANARY/ZP11.260618.005/15760424:user/release-keys",
+      "fingerprint" : "google/rango_beta/rango:CANARY/ZP11.260717.006/16004061:user/release-keys",
       "manufacturer" : "Google",
       "model" : "Pixel 10 Pro Fold",
-      "securityPatch" : "2026-07-05"
+      "securityPatch" : "2026-08-05"
    }
 ]
