@@ -27,12 +27,6 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-for command_name in curl grep sed sort tac paste perl mktemp; do
-  command -v "$command_name" >/dev/null 2>&1 || {
-    printf 'required command is missing: %s\n' "$command_name" >&2
-    exit 2
-  }
-done
 
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 repo_root=$(CDPATH= cd -- "$script_dir/.." && pwd)
@@ -46,11 +40,11 @@ tmpdir=$(mktemp -d)
 trap 'rm -rf "$tmpdir"' EXIT
 
 ANDROID_VERSIONS_URL=https://developer.android.com/about/versions
+FACTORY_IMAGES_URL=https://developers.google.com/android/images
 FLASH_HOME=https://flash.android.com
 FLASH_API=https://content-flashstation-pa.googleapis.com/v1/builds
 PIXEL_BULLETIN=https://source.android.com/docs/security/bulletin/pixel
 USER_AGENT='Pixel-AutoPIF/1.0'
-
 download() {
   local url=$1
   local destination=$2
@@ -147,28 +141,89 @@ fi
   printf '%s\n' 'could not determine full-image and OTA table URLs' >&2
   exit 1
 }
-
 fi_html="$tmpdir/factory-images.html"
 ota_html="$tmpdir/ota-images.html"
-download "$(absolute_developer_url "$fi_link")" "$fi_html"
-download "$(absolute_developer_url "$ota_link")" "$ota_html"
+download "$(absolute_developer_url "$fi_link")" "$fi_html" || true
+download "$(absolute_developer_url "$ota_link")" "$ota_html" || true
 
-fi_rows=$(grep -c 'tr id=' "$fi_html" || true)
-ota_rows=$(grep -c 'tr id=' "$ota_html" || true)
+fi_rows=$(grep -c 'tr id=' "$fi_html" 2>/dev/null || true)
+ota_rows=$(grep -c 'tr id=' "$ota_html" 2>/dev/null || true)
 source_html=$fi_html
 if (( ota_rows > fi_rows )); then
   source_html=$ota_html
 fi
 
-models_file="$tmpdir/models"
-products_file="$tmpdir/products"
-grep -A1 'tr id=' "$source_html" |
-  grep 'td' |
-  sed -n 's;.*<td>\(.*\)</td>.*;\1;p' |
-  sed '/^--$/d' > "$models_file"
-grep 'tr id=' "$source_html" |
-  sed -n 's;.*<tr id="\([^"]*\)">.*;\1_beta;p' > "$products_file"
+google_factory_html="$tmpdir/google-factory-images.html"
+curl --fail --silent --show-error --location --retry 2 --retry-all-errors \
+  --connect-timeout 15 --max-time 45 --compressed \
+  --cookie "devsite_wall_acks=nexus-image-tos" \
+  --user-agent "$USER_AGENT" "$FACTORY_IMAGES_URL" -o "$google_factory_html" || true
 
+devices_tsv="$tmpdir/devices.tsv"
+perl - "$source_html" "$google_factory_html" "$devices_tsv" <<'PERL'
+use strict;
+use warnings;
+my ($source_path, $factory_path, $out_path) = @ARGV;
+
+my %devices; # product => { model => $model, release_id => $id, incremental => $num }
+
+if (-f $source_path) {
+    open my $in, '<', $source_path or warn "cannot read $source_path: $!\n";
+    if ($in) {
+        local $/;
+        my $html = <$in>;
+        while ($html =~ /<tr[^>]*id="([^"]+)"[^>]*>\s*<td>(.*?)<\/td>/sg) {
+            my $prod = $1;
+            my $model = $2;
+            $model =~ s/<[^>]+>/ /g; $model =~ s/\s+/ /g; $model =~ s/^\s+|\s+$//g;
+            $prod = "${prod}_beta" unless $prod =~ /_beta$/;
+            $devices{$prod} = { model => $model, release_id => '', incremental => '' };
+        }
+    }
+}
+
+if (-f $factory_path) {
+    open my $in, '<', $factory_path or warn "cannot read $factory_path: $!\n";
+    if ($in) {
+        local $/;
+        my $html = <$in>;
+        while ($html =~ /<h2\s+id="([^"]+)"[^>]*>(.*?)<\/h2>(.*?)(?=<h2|\z)/sg) {
+            my $device = $1;
+            my $heading = $2;
+            my $section = $3;
+            $heading =~ s/<[^>]+>//g;
+            my ($model) = $heading =~ /for\s+(Pixel[^"<]+)/;
+            next unless $model;
+            $model =~ s/^\s+|\s+$//g;
+            my $prod = "${device}_beta";
+
+            my @rows = $section =~ /<tr[^>]*id="[^"]*"[^>]*>(.*?)<\/tr>/sg;
+            next unless @rows;
+            my $last_row = $rows[-1];
+            my ($version) = $last_row =~ /<td>(.*?)<\/td>/s;
+            $version =~ s/<[^>]+>//g; $version =~ s/^\s+|\s+$//g;
+            my ($flash_build) = $last_row =~ /flash\.android\.com\/build\/([0-9]+)\?target=/;
+            my ($release_id) = $version =~ /\(([^,\)]+)/;
+            $release_id =~ s/^\s+|\s+$//g if $release_id;
+            $flash_build //= '';
+            $release_id //= '';
+
+            if (!exists $devices{$prod}) {
+                $devices{$prod} = { model => $model, release_id => $release_id, incremental => $flash_build };
+            } elsif ($release_id && !$devices{$prod}{release_id}) {
+                $devices{$prod}{release_id} = $release_id;
+                $devices{$prod}{incremental} = $flash_build;
+            }
+        }
+    }
+}
+
+open my $out, '>', $out_path or die "cannot write $out_path: $!\n";
+for my $prod (sort keys %devices) {
+    my $info = $devices{$prod};
+    print {$out} join("\t", $info->{model}, $prod, $info->{release_id} || '', $info->{incremental} || ''), "\n";
+}
+PERL
 flash_html="$tmpdir/flash.html"
 download "$FLASH_HOME" "$flash_html"
 flash_key=$(grep -oE 'AIza[[:alnum:]_-]{20,}' "$flash_html" | head -n 1 || true)
@@ -184,7 +239,7 @@ entries_tsv="$tmpdir/entries.tsv"
 : > "$entries_tsv"
 entry_count=0
 
-while IFS=$'\t' read -r raw_model product; do
+while IFS=$'\t' read -r raw_model product fb_release_id fb_incremental; do
   [[ -n $raw_model && -n $product ]] || continue
   model=$(clean_model "$raw_model")
   supported_model "$model" || continue
@@ -195,35 +250,53 @@ while IFS=$'\t' read -r raw_model product; do
   station_json="$tmpdir/station-$entry_count.json"
   reversed_json="$tmpdir/reversed-$entry_count.json"
   release_json="$tmpdir/release-$entry_count.json"
-  curl --fail --silent --show-error --location --retry 2 --retry-all-errors \
+  canary_found=0
+  if curl --fail --silent --show-error --location --retry 2 --retry-all-errors \
     --connect-timeout 15 --max-time 45 --compressed \
     --user-agent "$USER_AGENT" --header "Referer: $FLASH_HOME" \
-    "$FLASH_API?product=$product&key=$flash_key" -o "$station_json"
-  tac "$station_json" > "$reversed_json"
-  grep -m 1 -A 20 '"canary": true' "$reversed_json" > "$release_json" || {
-      printf 'no canary build found for %s\n' "$product" >&2
-      exit 1
-    }
+    "$FLASH_API?product=$product&key=$flash_key" -o "$station_json" 2>/dev/null; then
+    tac "$station_json" > "$reversed_json" 2>/dev/null || true
+    if grep -m 1 -A 20 '"canary": true' "$reversed_json" > "$release_json" 2>/dev/null; then
+      canary_found=1
+    fi
+  fi
 
-  release_id=$(
-    grep -m 1 '"releaseCandidateName"' "$release_json" |
-      sed -nE 's/.*"releaseCandidateName"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/p'
-  )
-  incremental=$(
-    grep -m 1 '"buildId"' "$release_json" |
-      sed -nE 's/.*"buildId"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/p'
-  )
-  release_suffix=$(
-    grep -m 1 '"id"' "$release_json" |
-      sed -nE 's/.*"id"[[:space:]]*:[[:space:]]*"canary-([^"]+)".*/\1/p'
-  )
-  [[ -n $release_id && -n $incremental && -n $release_suffix ]] || {
-    printf 'missing canary release data for %s\n' "$product" >&2
+  release_id=
+  incremental=
+  release_suffix=
+  if (( canary_found == 1 )); then
+    release_id=$(
+      grep -m 1 '"releaseCandidateName"' "$release_json" |
+        sed -nE 's/.*"releaseCandidateName"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/p'
+    )
+    incremental=$(
+      grep -m 1 '"buildId"' "$release_json" |
+        sed -nE 's/.*"buildId"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/p'
+    )
+    release_suffix=$(
+      grep -m 1 '"id"' "$release_json" |
+        sed -nE 's/.*"id"[[:space:]]*:[[:space:]]*"canary-([^"]+)".*/\1/p'
+    )
+  elif [[ -n $fb_release_id && -n $fb_incremental ]]; then
+    printf 'using factory image release %s (%s) for %s\n' "$fb_release_id" "$fb_incremental" "$product" >&2
+    release_id="$fb_release_id"
+    incremental="$fb_incremental"
+    # Derive release_suffix from release_id date (e.g. CD1A.260714.001.A9 -> 260714 -> 20260714)
+    if [[ $release_id =~ \.([0-9]{2})([0-9]{2})([0-9]{2})\. ]]; then
+      release_suffix="20${BASH_REMATCH[1]}${BASH_REMATCH[2]}${BASH_REMATCH[3]}"
+    fi
+  fi
+
+  [[ -n $release_id && -n $incremental ]] || {
+    printf 'missing release data for %s\n' "$product" >&2
     exit 1
   }
 
   fingerprint="google/$product/$device:CANARY/$release_id/$incremental:user/release-keys"
-  bulletin_month=$(printf '%s' "$release_suffix" | sed -nE 's/^([0-9]{4})([0-9]{2}).*$/\1-\2/p')
+  bulletin_month=
+  if [[ -n $release_suffix ]]; then
+    bulletin_month=$(printf '%s' "$release_suffix" | sed -nE 's/^([0-9]{4})([0-9]{2}).*$/\1-\2/p')
+  fi
   security_patch=
   if [[ -n $bulletin_month ]]; then
     security_patch=$(
@@ -233,8 +306,11 @@ while IFS=$'\t' read -r raw_model product; do
     )
   fi
   if [[ -z $security_patch ]]; then
-    fallback_day=$(printf '%s' "$release_suffix" | sed -nE 's/^[0-9]{6}([0-9]{2}).*$/\1/p')
-    [[ -n $fallback_day ]] || fallback_day=05
+    fallback_day=05
+    if [[ -n $release_suffix ]]; then
+      fallback_day=$(printf '%s' "$release_suffix" | sed -nE 's/^[0-9]{6}([0-9]{2}).*$/\1/p')
+      [[ -n $fallback_day ]] || fallback_day=05
+    fi
     [[ -n $bulletin_month ]] || {
       printf 'could not derive a release patch month for %s\n' "$product" >&2
       exit 1
@@ -245,7 +321,7 @@ while IFS=$'\t' read -r raw_model product; do
 
   printf '%s\t%s\tGoogle\t%s\n' "$fingerprint" "$security_patch" "$model" >> "$entries_tsv"
   entry_count=$((entry_count + 1))
-done < <(paste "$models_file" "$products_file")
+done < "$devices_tsv"
 
 (( entry_count > 0 )) || {
   printf '%s\n' 'the crawl returned no Pixel 6+ entries' >&2

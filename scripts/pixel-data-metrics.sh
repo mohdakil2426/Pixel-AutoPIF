@@ -8,15 +8,11 @@ if [[ ! -f $json_file ]]; then
   exit 0
 fi
 
-perl -MJSON::PP -0777 - "$json_file" <<'PERL'
+perl -MJSON::PP - "$json_file" <<'PERL'
 use strict;
 use warnings;
-use JSON::PP;
-
-my ($path) = @ARGV;
-open my $fh, '<', $path or do { print "0\tNone\t-\t-\n"; exit 0; };
-local $/;
-my $data = eval { decode_json(<$fh>) };
+my $raw = do { local (@ARGV, $/) = shift; <> };
+my $data = eval { JSON::PP::decode_json($raw) };
 if (!$data || ref($data) ne 'ARRAY') {
     print "0\tNone\t-\t-\n";
     exit 0;
@@ -24,6 +20,5 @@ if (!$data || ref($data) ne 'ARRAY') {
 my @models = map { $_->{model} // '' } grep { ref($_) eq 'HASH' } @$data;
 my @patches = sort grep { defined($_) && /^\d{4}-\d{2}-\d{2}$/ }
     map { $_->{securityPatch} } grep { ref($_) eq 'HASH' } @$data;
-print scalar(@$data), "\t", (join(', ', @models) || 'None'), "\t",
-    ($patches[0] // '-'), "\t", ($patches[-1] // '-'), "\n";
+printf "%d\t%s\t%s\t%s\n", scalar(@$data), join(', ', @models) || 'None', $patches[0] // '-', $patches[-1] // '-';
 PERL

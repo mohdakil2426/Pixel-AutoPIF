@@ -21,7 +21,6 @@ perl - "$input" <<'PERL'
 use strict;
 use warnings;
 use JSON::PP qw(decode_json);
-use Time::Piece;
 
 my $path = shift @ARGV;
 open my $fh, '<', $path or die "cannot read $path: $!\n";
@@ -49,11 +48,8 @@ sub allowed_model {
 
 sub valid_date {
     my ($value) = @_;
-    return 0 unless $value =~ /\A[0-9]{4}-[0-9]{2}-[0-9]{2}\z/;
-    eval { Time::Piece->strptime($value, '%Y-%m-%d') };
-    return $@ ? 0 : 1;
+    return $value =~ /\A[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])\z/;
 }
-
 for my $index (0 .. $#$data) {
     my $item = $data->[$index];
     fail($index, 'value must be an object') unless ref($item) eq 'HASH';
