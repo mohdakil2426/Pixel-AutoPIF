@@ -36,10 +36,10 @@
       "securityPatch" : "2026-08-05"
    },
    {
-      "fingerprint" : "google/cubs_beta/cubs:CANARY/CD1A.260714.001.A9/15938155:user/release-keys",
+      "fingerprint" : "google/cubs_beta/cubs:CANARY/CD1A.260905.001.B1/16238327:user/release-keys",
       "manufacturer" : "Google",
       "model" : "Pixel 11",
-      "securityPatch" : "2026-07-05"
+      "securityPatch" : "2026-09-05"
    },
    {
       "fingerprint" : "google/felix_beta/felix:CANARY/ZP11.260717.006/16004061:user/release-keys",
@@ -54,10 +54,10 @@
       "securityPatch" : "2026-08-05"
    },
    {
-      "fingerprint" : "google/grizzly_beta/grizzly:CANARY/CD1A.260714.001.A9/15938155:user/release-keys",
+      "fingerprint" : "google/grizzly_beta/grizzly:CANARY/CD1A.260905.001.B1/16238327:user/release-keys",
       "manufacturer" : "Google",
       "model" : "Pixel 11 Pro",
-      "securityPatch" : "2026-07-05"
+      "securityPatch" : "2026-09-05"
    },
    {
       "fingerprint" : "google/husky_beta/husky:CANARY/ZP11.260717.006/16004061:user/release-keys",
@@ -66,10 +66,10 @@
       "securityPatch" : "2026-08-05"
    },
    {
-      "fingerprint" : "google/kodiak_beta/kodiak:CANARY/CD1A.260714.001.A9/15938155:user/release-keys",
+      "fingerprint" : "google/kodiak_beta/kodiak:CANARY/CD1A.260905.001.B1/16238327:user/release-keys",
       "manufacturer" : "Google",
       "model" : "Pixel 11 Pro XL",
-      "securityPatch" : "2026-07-05"
+      "securityPatch" : "2026-09-05"
    },
    {
       "fingerprint" : "google/komodo_beta/komodo:CANARY/ZP11.260717.006/16004061:user/release-keys",
@@ -144,9 +144,9 @@
       "securityPatch" : "2026-08-05"
    },
    {
-      "fingerprint" : "google/yogi_beta/yogi:CANARY/CD1A.260714.001.A9/15938155:user/release-keys",
+      "fingerprint" : "google/yogi_beta/yogi:CANARY/CD1A.260905.001.B1/16238327:user/release-keys",
       "manufacturer" : "Google",
       "model" : "Pixel 11 Pro Fold",
-      "securityPatch" : "2026-07-05"
+      "securityPatch" : "2026-09-05"
    }
 ]
